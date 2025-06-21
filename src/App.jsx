@@ -90,7 +90,7 @@ Respond naturally and clearly.`;
         </Button>
         {isListening && (
           <Button onClick={stopListening}>
-            🛑 Stop
+            🛑 Stop daa
           </Button>
         )}
         <Button onClick={handleSubmit} disabled={loading}>
