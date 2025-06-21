@@ -18,10 +18,7 @@ export default function Interview() {
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
 
-  const { startListening, stopListening, isListening } = useSpeechRecognition(setQuestion, {
-    continuous: true, // handle pauses naturally
-    interimResults: true,
-  });
+  const { startListening, stopListening, isListening } = useSpeechRecognition(setQuestion);
 
   const handleSubmit = async () => {
     if (!question.trim()) return;
@@ -97,6 +94,7 @@ Respond naturally and clearly.`;
 
       {/* Chat container */}
       <main className="flex flex-col flex-grow max-w-4xl mx-auto w-full px-4 md:px-6">
+        {/* Chat history */}
         <div
           className="flex-grow overflow-y-auto bg-white rounded-2xl shadow-xl p-4 md:p-6 mb-6"
           style={{ maxHeight: '65vh' }}
@@ -176,7 +174,7 @@ Respond naturally and clearly.`;
               disabled={isListening || loading}
               className="transform transition hover:scale-105 active:scale-95"
             >
-              🎤 {isListening ? 'Listening...' : 'Start Listening'}
+              🎤 Start Listening
             </Button>
             {isListening && (
               <Button
@@ -213,7 +211,7 @@ Respond naturally and clearly.`;
       </main>
 
       {/* Animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes slideFadeIn {
           0% {
             opacity: 0;

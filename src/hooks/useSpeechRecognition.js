@@ -1,74 +1,61 @@
-// src/hooks/useSpeechRecognition.js
-import { useRef, useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-export const useSpeechRecognition = (onResult) => {
-  const recognitionRef = useRef(null);
+export function useSpeechRecognition(onResult) {
   const [isListening, setIsListening] = useState(false);
-  const [audioStream, setAudioStream] = useState(null);
-
-  const constraints = {
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-    },
-  };
+  const recognitionRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+
+    if (!SpeechRecognition) {
+      console.error('SpeechRecognition API not supported in this browser.');
+      return;
+    }
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
 
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
+    let finalTranscript = '';
 
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((result) => result[0].transcript)
-        .join('');
-      onResult(transcript.trim());
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interim += transcript;
+        }
+      }
+      onResult((finalTranscript + interim).trim());
     };
 
     recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
+    };
+
+    recognition.onend = () => {
       setIsListening(false);
     };
 
     recognitionRef.current = recognition;
-
-    return () => {
-      recognition.stop();
-      if (audioStream) {
-        audioStream.getTracks().forEach((track) => track.stop());
-      }
-    };
   }, [onResult]);
 
-  const startListening = async () => {
-    if (!recognitionRef.current || isListening) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      setAudioStream(stream);
+  const startListening = () => {
+    if (recognitionRef.current && !isListening) {
       recognitionRef.current.start();
-    } catch (err) {
-      console.error('Mic permission or device error:', err);
+      setIsListening(true);
     }
   };
 
   const stopListening = () => {
-    if (!recognitionRef.current || !isListening) return;
-    recognitionRef.current.stop();
-    if (audioStream) {
-      audioStream.getTracks().forEach((track) => track.stop());
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
     }
-    setAudioStream(null);
   };
 
   return {
@@ -76,4 +63,4 @@ export const useSpeechRecognition = (onResult) => {
     stopListening,
     isListening,
   };
-};
+}
