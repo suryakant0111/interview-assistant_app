@@ -6,6 +6,7 @@ import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import { fetchGeminiAnswer } from '../../lib/geminiApi';
 import { Textarea } from '../Textarea';
 import { Button } from '../Button';
+import { MicWaveform } from '../MicWaveform';
 
 export default function Interview() {
   const [question, setQuestion] = useState('');
@@ -79,23 +80,23 @@ Respond naturally and clearly.`;
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100 text-gray-900 font-sans">
       {/* Header */}
-      <header className="px-6 py-8 text-center drop-shadow-lg">
-        <h1 className="text-4xl font-extrabold text-indigo-700 tracking-wide select-none">
+      <header className="px-4 py-6 text-center drop-shadow-lg">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-indigo-700 tracking-wide select-none">
           Interview AI Assistant
         </h1>
       </header>
 
       {/* Forms */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-6 max-w-6xl mx-auto mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 md:px-6 max-w-6xl mx-auto mb-6">
         <ResumeForm value={resume} onChange={(e) => setResume(e.target.value)} />
         <JobDescriptionForm value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} />
       </div>
 
       {/* Chat container */}
-      <main className="flex flex-col flex-grow max-w-4xl mx-auto w-full px-6">
+      <main className="flex flex-col flex-grow max-w-4xl mx-auto w-full px-4 md:px-6">
         {/* Chat history */}
         <div
-          className="flex-grow overflow-y-auto bg-white rounded-2xl shadow-xl p-6 mb-6"
+          className="flex-grow overflow-y-auto bg-white rounded-2xl shadow-xl p-4 md:p-6 mb-6"
           style={{ maxHeight: '65vh' }}
         >
           {chatHistory.length === 0 && (
@@ -128,14 +129,14 @@ Respond naturally and clearly.`;
         </div>
 
         {/* Input and controls */}
-        <div className="bg-white rounded-2xl shadow-xl p-5 flex flex-col sm:flex-row items-center gap-4 relative">
+        <div className="bg-white rounded-2xl shadow-xl p-4 md:p-5 flex flex-col sm:flex-row items-center gap-4 relative w-full">
           <div className="relative flex-grow w-full">
             <Textarea
               ref={inputRef}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="Ask your interview question..."
-              className="min-h-[90px] pr-12 resize-none rounded-xl border border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 transition"
+              className="min-h-[90px] pr-12 resize-none rounded-xl border border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 transition w-full"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -166,7 +167,8 @@ Respond naturally and clearly.`;
             )}
           </div>
 
-          <div className="flex flex-wrap gap-3 justify-end w-full sm:w-auto">
+          <div className="flex flex-wrap gap-3 justify-end w-full sm:w-auto items-center">
+            <MicWaveform isListening={isListening} />
             <Button
               onClick={startListening}
               disabled={isListening || loading}
@@ -183,6 +185,7 @@ Respond naturally and clearly.`;
                 🛑 Stop
               </Button>
             )}
+
             <Button
               onClick={handleSubmit}
               disabled={loading || !question.trim()}

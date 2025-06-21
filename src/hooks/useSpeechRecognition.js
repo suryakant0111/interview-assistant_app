@@ -1,9 +1,18 @@
-// File: src/hooks/useSpeechRecognition.js
+// src/hooks/useSpeechRecognition.js
 import { useRef, useState, useEffect } from 'react';
 
 export const useSpeechRecognition = (onResult) => {
   const recognitionRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
+  const [audioStream, setAudioStream] = useState(null);
+
+  const constraints = {
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -36,22 +45,35 @@ export const useSpeechRecognition = (onResult) => {
 
     return () => {
       recognition.stop();
+      if (audioStream) {
+        audioStream.getTracks().forEach((track) => track.stop());
+      }
     };
   }, [onResult]);
 
-  const startListening = () => {
+  const startListening = async () => {
     if (!recognitionRef.current || isListening) return;
-    recognitionRef.current.start();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      setAudioStream(stream);
+      recognitionRef.current.start();
+    } catch (err) {
+      console.error('Mic permission or device error:', err);
+    }
   };
 
   const stopListening = () => {
     if (!recognitionRef.current || !isListening) return;
     recognitionRef.current.stop();
+    if (audioStream) {
+      audioStream.getTracks().forEach((track) => track.stop());
+    }
+    setAudioStream(null);
   };
 
   return {
     startListening,
     stopListening,
-    isListening
+    isListening,
   };
 };
