@@ -10,25 +10,31 @@ export const useSpeechRecognition = (onResult) => {
 
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      console.error('Web Speech API not supported.');
+      return;
+    }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+
+    // ✅ Mobile-safe defaults
+    recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
 
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
-
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
-        .map((result) => result[0].transcript)
+        .map((r) => r[0].transcript)
         .join('');
       onResult(transcript.trim());
     };
 
     recognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
+      console.error('Recognition error:', event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
       setIsListening(false);
     };
 
@@ -40,18 +46,24 @@ export const useSpeechRecognition = (onResult) => {
   }, [onResult]);
 
   const startListening = () => {
-    if (!recognitionRef.current || isListening) return;
-    recognitionRef.current.start();
+    try {
+      if (isListening || !recognitionRef.current) return;
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (e) {
+      console.error('Start error:', e);
+    }
   };
 
   const stopListening = () => {
-    if (!recognitionRef.current || !isListening) return;
-    recognitionRef.current.stop();
+    try {
+      if (!isListening || !recognitionRef.current) return;
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } catch (e) {
+      console.error('Stop error:', e);
+    }
   };
 
-  return {
-    startListening,
-    stopListening,
-    isListening
-  };
+  return { startListening, stopListening, isListening };
 };

@@ -3,6 +3,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase";
+import TestMic from "@/components/pages/TestMic";
 
 import { LoginForm } from "@/components/LoginForm";
 import Home from "@/components/pages/Home";
@@ -39,6 +40,10 @@ export default function App() {
                 <Route path="/interview" element={<Interview />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
+              
+               {/* other routes */}
+              <Route path="/test-mic" element={<TestMic />} />
+             
               </>
             )}
           </Routes>
