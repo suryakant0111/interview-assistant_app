@@ -3,38 +3,27 @@ import { useEffect, useRef, useState } from 'react';
 export function useSpeechRecognition(onResult) {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
-  const finalTranscriptRef = useRef('');
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   useEffect(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      console.error('SpeechRecognition API not supported in this browser.');
+      console.error('SpeechRecognition API not supported.');
       return;
     }
 
     const recognition = new SpeechRecognition();
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    recognition.continuous = !isMobile;
-    recognition.interimResults = !isMobile;
     recognition.lang = 'en-US';
 
-    recognition.onresult = (event) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscriptRef.current += transcript + ' ';
-        } else {
-          interim += transcript;
-        }
-      }
+    recognition.continuous = false; // 🔒 Mobile-safe
+    recognition.interimResults = false;
 
-      const current = (finalTranscriptRef.current + interim).trim();
-      if (current !== '') {
-        onResult(current);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript) {
+        onResult(transcript.trim());
       }
     };
 
@@ -52,29 +41,26 @@ export function useSpeechRecognition(onResult) {
   const startListening = () => {
     if (!recognitionRef.current || isListening) return;
 
-    finalTranscriptRef.current = ''; // Reset before starting
-
     try {
-      if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      if (!isMobile) {
         window.speechSynthesis?.cancel?.();
       }
     } catch (_) {}
 
-    recognitionRef.current.start();
-    setIsListening(true);
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (e) {
+      console.error('Could not start recognition:', e.message);
+    }
   };
 
   const stopListening = () => {
     if (recognitionRef.current && isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
-      finalTranscriptRef.current = ''; // ✅ Clear after stopping to prevent reuse
     }
   };
 
-  return {
-    startListening,
-    stopListening,
-    isListening,
-  };
+  return { startListening, stopListening, isListening };
 }
