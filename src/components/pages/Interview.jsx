@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ResumeForm } from '../ResumeForm';
 import { JobDescriptionForm } from '../JobDescriptionForm';
 import { AnswerRenderer } from '../AnswerRenderer';
@@ -7,7 +6,6 @@ import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import { fetchGeminiAnswer } from '../../lib/geminiApi';
 import { Textarea } from '../Textarea';
 import { Button } from '../Button';
-import { MicWaveform } from '../MicWaveform';
 
 export default function Interview() {
   const [question, setQuestion] = useState('');
@@ -15,13 +13,81 @@ export default function Interview() {
   const [jobDesc, setJobDesc] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isChromeMobile, setIsChromeMobile] = useState(false);
+  const [speechError, setSpeechError] = useState(null);
+  const lastTranscriptRef = useRef(''); // Track last processed transcript
 
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
 
-  const { startListening, stopListening, isListening } = useSpeechRecognition((transcript) => {
-    setQuestion(transcript);
+  // Stable callbacks
+  const onResult = useCallback((transcript, isFinal) => {
+    console.log('Raw transcript:', transcript, 'IsFinal:', isFinal);
+    const sanitized = transcript
+      .replace(/\b(?:HRBT|HBRT|H B R T|uhm|uh|ah|mm)\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    console.log('Sanitized transcript:', sanitized);
+
+    // Only update if final or if interim is significantly different
+    if (isFinal || (sanitized && sanitized !== lastTranscriptRef.current)) {
+      setQuestion((prev) => {
+        // Replace interim with final or append new transcript
+        const newQuestion = isFinal ? sanitized : prev.trim() ? `${prev} ${sanitized}` : sanitized;
+        console.log('Updated question:', newQuestion);
+        lastTranscriptRef.current = sanitized;
+        return newQuestion;
+      });
+      setSpeechError(null);
+    } else {
+      console.log('Skipped duplicate or empty transcript:', sanitized);
+    }
+  }, []);
+
+  const onStart = useCallback(() => {
+    console.log('🎙️ Speech recognition started in Interview.jsx at', new Date().toISOString());
+    lastTranscriptRef.current = ''; // Reset transcript tracking
+  }, []);
+
+  const onEnd = useCallback(() => {
+    console.log('🛑 Speech recognition stopped in Interview.jsx at', new Date().toISOString());
+  }, []);
+
+  const onError = useCallback((error) => {
+    console.error('Speech recognition error in Interview.jsx:', error);
+    setSpeechError(`Speech recognition error: ${error}. Please check microphone permissions and ensure no other app is using the microphone.`);
+  }, []);
+
+  // Detect Chrome on mobile
+  useEffect(() => {
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    const isChrome = /Chrome/.test(navigator.userAgent);
+    setIsChromeMobile(isMobile && isChrome);
+    console.log('isChromeMobile:', isMobile && isChrome);
+  }, []);
+
+  const { startListening, stopListening, isListening, isSupported } = useSpeechRecognition({
+    onResult,
+    autoRestart: false,
+    onStart,
+    onEnd,
+    onError,
   });
+
+  // Stop recognition on tab visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isListening) {
+        console.log('Visibility change: stopping recognition');
+        stopListening();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isListening, stopListening]);
 
   const handleSubmit = async () => {
     if (!question.trim()) return;
@@ -68,7 +134,7 @@ Respond naturally and clearly.`;
       setQuestion('');
       inputRef.current?.focus();
     } catch (error) {
-      console.error("Error fetching answer:", error);
+      console.error('Error fetching answer:', error);
     } finally {
       setLoading(false);
     }
@@ -78,7 +144,10 @@ Respond naturally and clearly.`;
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
 
-  const clearQuestion = () => setQuestion('');
+  const clearQuestion = () => {
+    setQuestion('');
+    lastTranscriptRef.current = '';
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100 text-gray-900 font-sans">
@@ -166,28 +235,32 @@ Respond naturally and clearly.`;
           </div>
 
           <div className="flex flex-wrap gap-3 justify-end w-full sm:w-auto items-center">
-            <MicWaveform isListening={isListening} />
+            <span
+              className={`inline-block w-3 h-3 rounded-full mr-2 ${
+                isListening ? 'bg-red-500 animate-pulse' : 'bg-gray-300'
+              }`}
+              title={isListening ? 'Listening' : 'Not listening'}
+            />
             <Button
               onClick={startListening}
-              disabled={isListening || loading}
+              disabled={isListening || loading || !isSupported}
               className="transform transition hover:scale-105 active:scale-95"
             >
-              🎤 Start Listening
+              🎤 Start
             </Button>
             {isListening && (
               <Button
                 onClick={stopListening}
                 disabled={loading}
-                className="transform transition hover:scale-105 active:scale-95"
+                className="transform transition hover:scale-105 active:scale-95 bg-red-500 hover:bg-red-600"
               >
                 🛑 Stop
               </Button>
             )}
-
             <Button
               onClick={handleSubmit}
               disabled={loading || !question.trim()}
-              className="transform transition hover:scale-105 active:scale-95"
+              className="transform transition hover:scale-105 active:scale-95 bg-indigo-600 hover:bg-indigo-700 text-white"
             >
               ✉️ Ask
             </Button>
@@ -196,11 +269,23 @@ Respond naturally and clearly.`;
               className="bg-red-600 hover:bg-red-700 text-white transform transition hover:scale-105 active:scale-95"
               disabled={loading}
             >
-              🗑️ Clear Chat
+              🗑️ Clear
+            </Button>
+            <Button
+              onClick={() => setQuestion('Test question from speech')}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white transform transition hover:scale-105 active:scale-95"
+            >
+              🧪 Test Speech
             </Button>
           </div>
         </div>
 
+        <div className="text-sm text-gray-600 mt-2 text-center">
+          Speech Recognition: {isSupported ? 'Supported' : 'Not Supported'} | Listening: {isListening.toString()}
+        </div>
+        {speechError && (
+          <p className="text-center text-red-600 font-semibold mt-2">{speechError}</p>
+        )}
         {loading && (
           <p className="text-center text-indigo-600 font-semibold mt-3 animate-pulse select-none">
             Thinking...
@@ -221,6 +306,13 @@ Respond naturally and clearly.`;
         }
         .animate-slideFadeIn {
           animation: slideFadeIn 0.4s ease forwards;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+          animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
       `}</style>
     </div>
