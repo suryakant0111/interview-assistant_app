@@ -1,66 +1,58 @@
-import { useEffect, useRef, useState } from 'react';
+// File: src/hooks/useSpeechRecognition.js
+import { useRef, useState, useEffect } from 'react';
 
-export function useSpeechRecognition(onResult) {
-  const [isListening, setIsListening] = useState(false);
+export const useSpeechRecognition = (onResult) => {
   const recognitionRef = useRef(null);
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      console.error('SpeechRecognition API not supported.');
-      return;
-    }
+    if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
     recognition.lang = 'en-US';
 
-    recognition.continuous = false; // 🔒 Mobile-safe
-    recognition.interimResults = false;
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      if (transcript) {
-        onResult(transcript.trim());
-      }
+      const transcript = Array.from(event.results)
+        .map((result) => result[0].transcript)
+        .join('');
+      onResult(transcript.trim());
     };
 
     recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
-    };
-
-    recognition.onend = () => {
       setIsListening(false);
     };
 
     recognitionRef.current = recognition;
+
+    // Cleanup when component unmounts
+    return () => {
+      recognition.stop();
+    };
   }, [onResult]);
 
   const startListening = () => {
     if (!recognitionRef.current || isListening) return;
-
-    try {
-      if (!isMobile) {
-        window.speechSynthesis?.cancel?.();
-      }
-    } catch (_) {}
-
-    try {
-      recognitionRef.current.start();
-      setIsListening(true);
-    } catch (e) {
-      console.error('Could not start recognition:', e.message);
-    }
+    recognitionRef.current.start();
   };
 
   const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
+    if (!recognitionRef.current || !isListening) return;
+    recognitionRef.current.stop();
   };
 
-  return { startListening, stopListening, isListening };
-}
+  return {
+    startListening,
+    stopListening,
+    isListening
+  };
+};
