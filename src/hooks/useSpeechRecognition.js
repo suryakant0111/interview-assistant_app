@@ -1,4 +1,3 @@
-// File: src/hooks/useSpeechRecognition.js
 import { useRef, useState, useEffect } from 'react';
 
 export const useSpeechRecognition = (onResult) => {
@@ -8,13 +7,13 @@ export const useSpeechRecognition = (onResult) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.continuous = !isMobile;
+    recognition.interimResults = !isMobile;
     recognition.lang = 'en-US';
 
     recognition.onstart = () => setIsListening(true);
@@ -34,10 +33,7 @@ export const useSpeechRecognition = (onResult) => {
 
     recognitionRef.current = recognition;
 
-    // Cleanup when component unmounts
-    return () => {
-      recognition.stop();
-    };
+    return () => recognition.stop();
   }, [onResult]);
 
   const startListening = () => {
@@ -50,9 +46,5 @@ export const useSpeechRecognition = (onResult) => {
     recognitionRef.current.stop();
   };
 
-  return {
-    startListening,
-    stopListening,
-    isListening
-  };
+  return { startListening, stopListening, isListening };
 };
