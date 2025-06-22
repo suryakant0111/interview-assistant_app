@@ -1,6 +1,4 @@
-// File: src/hooks/useSpeechRecognition.js
-import { useRef, useState, useEffect } from 'react';
-
+// ✅ Working hook
 export const useSpeechRecognition = (onResult) => {
   const recognitionRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
@@ -10,31 +8,25 @@ export const useSpeechRecognition = (onResult) => {
 
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.error('Web Speech API not supported.');
-      return;
-    }
+    if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
-
-    // ✅ Mobile-safe defaults
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
 
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
-        .map((r) => r[0].transcript)
+        .map((result) => result[0].transcript)
         .join('');
       onResult(transcript.trim());
     };
 
     recognition.onerror = (event) => {
-      console.error('Recognition error:', event.error);
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
+      console.error('Speech recognition error:', event.error);
       setIsListening(false);
     };
 
@@ -46,24 +38,18 @@ export const useSpeechRecognition = (onResult) => {
   }, [onResult]);
 
   const startListening = () => {
-    try {
-      if (isListening || !recognitionRef.current) return;
-      recognitionRef.current.start();
-      setIsListening(true);
-    } catch (e) {
-      console.error('Start error:', e);
-    }
+    if (!recognitionRef.current || isListening) return;
+    recognitionRef.current.start();
   };
 
   const stopListening = () => {
-    try {
-      if (!isListening || !recognitionRef.current) return;
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } catch (e) {
-      console.error('Stop error:', e);
-    }
+    if (!recognitionRef.current || !isListening) return;
+    recognitionRef.current.stop();
   };
 
-  return { startListening, stopListening, isListening };
+  return {
+    startListening,
+    stopListening,
+    isListening
+  };
 };
