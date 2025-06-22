@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 export function useSpeechRecognition(onResult) {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
+  const finalTranscriptRef = useRef('');
 
   useEffect(() => {
     const SpeechRecognition =
@@ -14,23 +15,27 @@ export function useSpeechRecognition(onResult) {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    let finalTranscript = '';
+    recognition.continuous = !isMobile;
+    recognition.interimResults = !isMobile;
+    recognition.lang = 'en-US';
 
     recognition.onresult = (event) => {
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += transcript + ' ';
+          finalTranscriptRef.current += transcript + ' ';
         } else {
           interim += transcript;
         }
       }
-      onResult((finalTranscript + interim).trim());
+
+      const current = (finalTranscriptRef.current + interim).trim();
+      if (current !== '') {
+        onResult(current);
+      }
     };
 
     recognition.onerror = (event) => {
@@ -45,16 +50,25 @@ export function useSpeechRecognition(onResult) {
   }, [onResult]);
 
   const startListening = () => {
-    if (recognitionRef.current && !isListening) {
-      recognitionRef.current.start();
-      setIsListening(true);
-    }
+    if (!recognitionRef.current || isListening) return;
+
+    finalTranscriptRef.current = ''; // Reset before starting
+
+    try {
+      if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        window.speechSynthesis?.cancel?.();
+      }
+    } catch (_) {}
+
+    recognitionRef.current.start();
+    setIsListening(true);
   };
 
   const stopListening = () => {
     if (recognitionRef.current && isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
+      finalTranscriptRef.current = ''; // ✅ Clear after stopping to prevent reuse
     }
   };
 
