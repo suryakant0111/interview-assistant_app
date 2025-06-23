@@ -2,59 +2,30 @@ import { useEffect, useRef, useState } from "react";
 
 export const useSpeechRecognition = ({
   onResult,
-  autoRestart = false,
+  autoRestart = true,
   onStart,
   onEnd,
   onError,
 }) => {
   const recognitionRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
-  const autoRestartRef = useRef(autoRestart);
-  const restartTimeoutRef = useRef(null);
-  const debounceTimeoutRef = useRef(null);
   const lastTranscriptRef = useRef('');
+  const debounceRef = useRef(null);
   const isMountedRef = useRef(true);
-  const activeRef = useRef(false);
+  const autoRestartRef = useRef(autoRestart);
 
   useEffect(() => {
     autoRestartRef.current = autoRestart;
   }, [autoRestart]);
 
-  const cleanup = () => {
-    clearTimeout(restartTimeoutRef.current);
-    clearTimeout(debounceTimeoutRef.current);
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-        console.log("🧹 Recognition stopped");
-      } catch (err) {
-        console.warn("Cleanup stop failed:", err.message);
-      }
-      recognitionRef.current = null;
-    }
-
-    activeRef.current = false;
-    setIsListening(false);
-  };
-
   useEffect(() => {
     isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      cleanup();
-    };
-  }, []);
 
-  const initializeRecognition = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn("SpeechRecognition not supported");
       onError?.("SpeechRecognition not supported");
-      return false;
+      return;
     }
-
-    cleanup();
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
@@ -62,97 +33,83 @@ export const useSpeechRecognition = ({
     recognition.lang = "en-US";
 
     recognition.onstart = () => {
-      if (!isMountedRef.current) return;
       setIsListening(true);
-      activeRef.current = true;
       lastTranscriptRef.current = '';
-      console.log("🎙️ Recognition started");
       onStart?.();
     };
 
     recognition.onend = () => {
-      if (!isMountedRef.current) return;
       setIsListening(false);
-      activeRef.current = false;
-      console.log("🛑 Recognition ended");
       onEnd?.();
-
       if (autoRestartRef.current && isMountedRef.current) {
-        restartTimeoutRef.current = setTimeout(() => {
-          if (!activeRef.current) {
-            console.log("🔁 Restarting recognition...");
-            startListening();
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {
+            onError?.(e.message);
           }
-        }, 400);
-      }
-    };
-
-    recognition.onresult = (event) => {
-      if (!isMountedRef.current) return;
-
-      let interim = "";
-      let final = "";
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        const result = event.results[i];
-        const transcript = result[0].transcript;
-        if (result.isFinal) final += transcript + " ";
-        else interim += transcript + " ";
-      }
-
-      const combined = (final || interim).trim();
-
-      if (combined && combined !== lastTranscriptRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-        debounceTimeoutRef.current = setTimeout(() => {
-          onResult?.(combined, !!final);
-          lastTranscriptRef.current = combined;
-        }, 400);
+        }, 400); // short pause buffer
       }
     };
 
     recognition.onerror = (event) => {
-      if (!isMountedRef.current) return;
-      console.error("❌ Speech error:", event.error);
-      cleanup();
       onError?.(event.error);
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      let final = "";
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += transcript + " ";
+        else interim += transcript + " ";
+      }
+
+      const output = (final || interim).trim();
+      if (!output || output === lastTranscriptRef.current) return;
+
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        lastTranscriptRef.current = output;
+        onResult?.(output, !!final);
+      }, 250); // smart debounce
     };
 
     recognitionRef.current = recognition;
-    return true;
-  };
+
+    return () => {
+      isMountedRef.current = false;
+      if (recognition) recognition.stop();
+      clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const startListening = () => {
-    if (activeRef.current || !initializeRecognition()) return;
-
-    // ⚠️ Removed speechSynthesis.cancel()
-
-    // Request microphone permission (especially important on mobile)
-    setTimeout(() => {
+    if (recognitionRef.current && !isListening) {
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(() => {
           try {
-            recognitionRef.current?.start();
-          } catch (err) {
-            console.error("Start failed:", err.message);
-            cleanup();
-            onError?.(err.message);
+            recognitionRef.current.start();
+          } catch (e) {
+            onError?.(e.message);
           }
         })
         .catch((err) => {
-          console.error("🎙️ Mic error:", err.message);
-          cleanup();
-          onError?.(err.name === "NotAllowedError" ? "not-allowed" : err.message);
-
           if (err.name === "NotAllowedError") {
-            alert("Microphone access denied. Please enable mic access in browser settings.");
+            alert("Please allow microphone access.");
           }
+          onError?.(err.message);
         });
-    }, 200);
+    }
   };
 
   const stopListening = () => {
-    cleanup();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
   };
 
   return {
