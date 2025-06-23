@@ -140,7 +140,7 @@ export default function Profile() {
       </Card>
 
       {/* Animation styles */}
-      <style jsx>{`
+      <style >{`
         @keyframes fadeIn {
           from {
             opacity: 0;
