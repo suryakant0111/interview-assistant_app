@@ -21,23 +21,19 @@ export const useSpeechRecognition = ({
   }, [autoRestart]);
 
   const cleanup = () => {
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-      restartTimeoutRef.current = null;
-    }
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = null;
-    }
+    clearTimeout(restartTimeoutRef.current);
+    clearTimeout(debounceTimeoutRef.current);
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-        console.log("Cleanup: stopped recognition");
+        console.log("🧹 Recognition stopped");
       } catch (err) {
         console.warn("Cleanup stop failed:", err.message);
       }
       recognitionRef.current = null;
     }
+
     activeRef.current = false;
     setIsListening(false);
   };
@@ -84,7 +80,7 @@ export const useSpeechRecognition = ({
       if (autoRestartRef.current && isMountedRef.current) {
         restartTimeoutRef.current = setTimeout(() => {
           if (!activeRef.current) {
-            console.log("Restarting speech recognition...");
+            console.log("🔁 Restarting recognition...");
             startListening();
           }
         }, 400);
@@ -129,8 +125,9 @@ export const useSpeechRecognition = ({
   const startListening = () => {
     if (activeRef.current || !initializeRecognition()) return;
 
-    window.speechSynthesis.cancel();
+    // ⚠️ Removed speechSynthesis.cancel()
 
+    // Request microphone permission (especially important on mobile)
     setTimeout(() => {
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(() => {
@@ -143,11 +140,12 @@ export const useSpeechRecognition = ({
           }
         })
         .catch((err) => {
-          console.error("Mic error:", err.message);
+          console.error("🎙️ Mic error:", err.message);
           cleanup();
           onError?.(err.name === "NotAllowedError" ? "not-allowed" : err.message);
+
           if (err.name === "NotAllowedError") {
-            alert("Microphone access denied. Enable mic in browser settings.");
+            alert("Microphone access denied. Please enable mic access in browser settings.");
           }
         });
     }, 200);
