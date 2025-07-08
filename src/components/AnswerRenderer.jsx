@@ -20,7 +20,7 @@ function CodeBlock({ inline, className, children, ...props }) {
           {children}
         </code>
       </pre>
-      <button
+                <button
         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition bg-white/10 hover:bg-pink-500/80 text-white rounded-lg p-1.5 shadow-md"
         onClick={handleCopy}
         tabIndex={-1}
@@ -28,8 +28,8 @@ function CodeBlock({ inline, className, children, ...props }) {
         type="button"
       >
         <Copy className="w-4 h-4" />
-      </button>
-    </div>
+                </button>
+              </div>
   ) : (
     <code className={"px-1 py-0.5 rounded bg-white/10 text-pink-300 font-mono " + (className || "")}>{children}</code>
   );

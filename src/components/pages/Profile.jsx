@@ -100,7 +100,7 @@ export default function Profile() {
         <div className="relative">
           <img
             src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.email || "U")}`}
-            alt="Profile"
+                alt="Profile"
             className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white/20 shadow-lg bg-black"
           />
           {providerId && (
@@ -117,7 +117,7 @@ export default function Profile() {
           <Button size="icon" variant="glass" onClick={() => setEditOpen(true)} aria-label="Edit profile">
             <Edit className="w-5 h-5" />
           </Button>
-        </div>
+              </div>
         <div className="flex gap-2 flex-wrap justify-center mt-2">
           {badges.includes("Verified") && isVerified && (
             <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 text-green-300 text-xs font-semibold">
@@ -143,8 +143,8 @@ export default function Profile() {
             <span className="flex items-center gap-1 text-green-400 ml-2 text-xs font-semibold">
               <CheckCircle className="w-4 h-4" /> Verified
             </span>
-          )}
-        </div>
+              )}
+            </div>
         {/* Dates */}
         <div className="flex flex-col md:flex-row gap-2 text-xs text-white/60 mt-2 mb-1 text-center">
           <span>Member since: <b>{formatDate(user.createdAt)}</b></span>
@@ -158,7 +158,7 @@ export default function Profile() {
         <Button variant="premium" className="mt-6 w-full flex items-center gap-2 justify-center" onClick={handleSignOut}>
           <LogOut className="w-5 h-5" /> Sign Out
         </Button>
-      </div>
+          </div>
       {/* Edit Profile Modal */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-md w-full">
