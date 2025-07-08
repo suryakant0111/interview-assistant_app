@@ -24,16 +24,16 @@ export default function Navbar() {
 
   return (
     <nav
-      className="bg-white shadow-md px-4 sm:px-8 py-4 sticky top-0 z-50 backdrop-filter backdrop-saturate-180 backdrop-blur-md"
+      className="bg-black/70 shadow-lg px-4 sm:px-8 py-4 sticky top-0 z-50 backdrop-blur-md border-b border-white/10"
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo/Brand */}
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-gray-300 shadow-sm">
-            <div className="w-5 h-5 bg-black rounded-sm"></div>
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-lg flex items-center justify-center border border-white/20 shadow-md">
+            <div className="w-5 h-5 bg-white rounded-sm"></div>
           </div>
-          <span className="text-2xl font-semibold text-blue-600 select-none">
-            Interview AI
+          <span className="text-2xl font-bold text-white tracking-tight select-none drop-shadow">
+            Interview <span className="text-pink-400">AI</span>
           </span>
         </div>
 
@@ -42,25 +42,25 @@ export default function Navbar() {
           <Link
             to="/"
             onClick={handleLinkClick}
-            className="text-sm font-medium text-gray-700 hover:text-blue-600 hover:underline transition"
+            className="text-sm font-semibold text-white/80 hover:text-pink-400 transition"
           >
             Home
           </Link>
           <Link
             to="/interview"
             onClick={handleLinkClick}
-            className="text-sm font-medium text-gray-700 hover:text-blue-600 hover:underline transition"
+            className="text-sm font-semibold text-white/80 hover:text-pink-400 transition"
           >
             Interview
           </Link>
           <Link
             to="/profile"
             onClick={handleLinkClick}
-            className="text-sm font-medium text-gray-700 hover:text-blue-600 hover:underline transition"
+            className="text-sm font-semibold text-white/80 hover:text-pink-400 transition"
           >
             Profile
           </Link>
-          <Button variant="outline" onClick={handleLogout} className="text-sm font-medium">
+          <Button variant="outline" onClick={handleLogout} className="text-sm font-semibold border-white/20 text-white hover:bg-pink-500/20 hover:text-pink-300 transition">
             Logout
           </Button>
         </div>
@@ -70,11 +70,11 @@ export default function Navbar() {
           <button
             onClick={() => setMenuOpen((prev) => !prev)}
             aria-label="Toggle menu"
-            className="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
           >
             {/* Hamburger icon */}
             <svg
-              className="h-6 w-6 text-gray-700"
+              className="h-6 w-6 text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -104,25 +104,25 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden mt-4 space-y-4 px-2 pb-4 border-t border-gray-200">
+        <div className="md:hidden mt-4 space-y-4 px-2 pb-4 border-t border-white/10 bg-black/80 rounded-b-xl shadow-xl">
           <Link
             to="/"
             onClick={handleLinkClick}
-            className="block text-gray-700 font-medium text-base px-3 py-2 rounded-md hover:bg-blue-100 hover:text-blue-700 transition"
+            className="block text-white/90 font-semibold text-base px-3 py-2 rounded-md hover:bg-pink-500/10 hover:text-pink-400 transition"
           >
             Home
           </Link>
           <Link
             to="/interview"
             onClick={handleLinkClick}
-            className="block text-gray-700 font-medium text-base px-3 py-2 rounded-md hover:bg-blue-100 hover:text-blue-700 transition"
+            className="block text-white/90 font-semibold text-base px-3 py-2 rounded-md hover:bg-pink-500/10 hover:text-pink-400 transition"
           >
             Interview
           </Link>
           <Link
             to="/profile"
             onClick={handleLinkClick}
-            className="block text-gray-700 font-medium text-base px-3 py-2 rounded-md hover:bg-blue-100 hover:text-blue-700 transition"
+            className="block text-white/90 font-semibold text-base px-3 py-2 rounded-md hover:bg-pink-500/10 hover:text-pink-400 transition"
           >
             Profile
           </Link>
@@ -132,7 +132,7 @@ export default function Navbar() {
               handleLogout();
               setMenuOpen(false);
             }}
-            className="w-full text-base font-medium"
+            className="w-full text-base font-semibold border-white/20 text-white hover:bg-pink-500/20 hover:text-pink-300 transition"
           >
             Logout
           </Button>

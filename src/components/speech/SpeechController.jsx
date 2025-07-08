@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import { Button } from '../Button';
+import { Mic, Square } from 'lucide-react';
 
 export default function SpeechController({ onTextUpdate }) {
   const finalizedTranscriptsRef = useRef([]);
@@ -47,8 +48,7 @@ export default function SpeechController({ onTextUpdate }) {
     startListening,
     stopListening,
     isSupported
-  } = useSpeechRecognition({ onResult, onStart, onEnd, onError });
-
+  } = useSpeechRecognition({ onResult, onStart, onEnd, onError, autoRestart: false });
   const handleStart = () => {
     if (!isListening) startListening();
   };
@@ -64,19 +64,29 @@ export default function SpeechController({ onTextUpdate }) {
         title={isListening ? 'Listening' : 'Not listening'}
         aria-label={isListening ? 'Listening' : 'Not listening'}
       />
+      {/* Modern mic button */}
       <Button
         onClick={handleStart}
         disabled={isListening || !isSupported}
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-transform hover:scale-105 ${isListening ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'}`}
+        variant="primary"
+        size="sm"
+        className={`rounded-full w-10 h-10 p-0 flex items-center justify-center shadow-md ${isListening ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} transition-colors`}
+        title="Start voice input"
+        aria-label="Start voice input"
       >
-        🎙 Start
+        <Mic className={`w-5 h-5 ${isListening ? 'animate-pulse' : ''}`} />
       </Button>
+      {/* Modern stop button */}
       {isListening && (
         <Button
           onClick={handleStop}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white"
+          variant="danger"
+          size="sm"
+          className="rounded-full w-10 h-10 p-0 flex items-center justify-center shadow-md bg-red-600 hover:bg-red-700 transition-colors"
+          title="Stop voice input"
+          aria-label="Stop voice input"
         >
-          ⛔ Stop
+          <Square className="w-5 h-5" />
         </Button>
       )}
     </div>

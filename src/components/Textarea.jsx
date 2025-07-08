@@ -75,7 +75,8 @@ export const Textarea = forwardRef(({
   const variantClasses = {
     default: 'bg-white border border-gray-300',
     filled: 'bg-gray-50 border border-transparent',
-    minimal: 'bg-transparent border-0 border-b-2 border-gray-300 rounded-none px-0'
+    minimal: 'bg-transparent border-0 border-b-2 border-gray-300 rounded-none px-0',
+    dark: 'bg-black/60 border border-white/10 text-white placeholder-white/40',
   };
 
   const baseClasses = `
@@ -102,6 +103,8 @@ export const Textarea = forwardRef(({
         ? 'border-red-400 bg-red-50/30 focus:border-red-500 focus:ring-4 focus:ring-red-100'
         : variant === 'filled'
         ? 'bg-red-50 border-red-200 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+        : variant === 'dark'
+        ? 'border-pink-400 bg-black/60 focus:border-pink-400 focus:ring-4 focus:ring-pink-400/20'
         : 'border-red-500 focus:border-red-600';
     }
     
@@ -110,10 +113,17 @@ export const Textarea = forwardRef(({
         ? 'border-green-400 bg-green-50/30 focus:border-green-500 focus:ring-4 focus:ring-green-100'
         : variant === 'filled'
         ? 'bg-green-50 border-green-200 focus:border-green-500 focus:ring-4 focus:ring-green-100'
+        : variant === 'dark'
+        ? 'border-green-400 bg-black/60 focus:border-green-400 focus:ring-4 focus:ring-green-400/20'
         : 'border-green-500 focus:border-green-600';
     }
     
     // Default state
+    if (variant === 'dark') {
+      return isFocused
+        ? 'border-pink-400 bg-black/60 ring-4 ring-pink-400/20 text-white placeholder-white/40'
+        : 'border-white/10 bg-black/60 text-white placeholder-white/40';
+    }
     if (variant === 'default') {
       return isFocused
         ? 'border-blue-500 bg-white ring-4 ring-blue-100 shadow-lg shadow-blue-500/10'

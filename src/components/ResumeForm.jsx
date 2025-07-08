@@ -26,15 +26,15 @@ export function ResumeForm({ value, onChange }) {
   };
 
   return (
-    <Card variant="default" className="h-fit">
+    <Card variant="default" className="h-fit bg-white/5 border border-white/10 backdrop-blur-md shadow-xl">
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-blue-600 font-semibold text-sm">📄</span>
+            <div className="w-8 h-8 bg-pink-500/20 rounded-lg flex items-center justify-center">
+              <span className="text-pink-400 font-semibold text-sm">📄</span>
             </div>
-            <h3 className="text-lg font-semibold text-gray-800">Your Resume</h3>
+            <h3 className="text-lg font-semibold text-white/90">Your Resume</h3>
           </div>
           <div className={`text-xs font-medium ${getCharCountColor()}`}>
             {charCount.toLocaleString()} characters
@@ -43,8 +43,8 @@ export function ResumeForm({ value, onChange }) {
 
         {/* Collapsible Tips */}
         {charCount === 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="text-xs text-blue-700">
+          <div className="bg-pink-500/10 border border-pink-400/20 rounded-lg p-3">
+            <div className="text-xs text-pink-300">
               💡 Include: work experience, skills, education, achievements
             </div>
           </div>
@@ -58,18 +58,18 @@ export function ResumeForm({ value, onChange }) {
             placeholder="Paste your resume or write a summary of your experience..."
             rows={4}
             autoResize={false}
+            variant="dark"
             className="max-h-32 overflow-y-auto text-sm leading-relaxed"
           />
-          
           {/* Status indicator */}
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
-              charCount === 0 ? 'bg-gray-300' :
+              charCount === 0 ? 'bg-gray-700' :
               charCount < 100 ? 'bg-orange-400' :
-              charCount < 500 ? 'bg-blue-400' :
+              charCount < 500 ? 'bg-pink-400' :
               'bg-green-400'
             }`}></div>
-            <span className="text-xs text-gray-600">{getHelpText()}</span>
+            <span className="text-xs text-white/60">{getHelpText()}</span>
           </div>
         </div>
 
@@ -78,14 +78,10 @@ export function ResumeForm({ value, onChange }) {
           <div className="flex gap-2">
             <button
               onClick={() => {
-                const template = `John Doe - Software Engineer
-5+ years experience in full-stack development
-Skills: React, Node.js, Python, AWS
-Previous: Senior Developer at TechCorp (2020-2024)
-Education: BS Computer Science, State University`;
+                const template = `John Doe - Software Engineer\n5+ years experience in full-stack development\nSkills: React, Node.js, Python, AWS\nPrevious: Senior Developer at TechCorp (2020-2024)\nEducation: BS Computer Science, State University`;
                 onChange({ target: { value: template } });
               }}
-              className="text-xs text-blue-600 hover:text-blue-700 underline"
+              className="text-xs text-pink-400 hover:text-pink-300 underline"
             >
               Use Sample
             </button>

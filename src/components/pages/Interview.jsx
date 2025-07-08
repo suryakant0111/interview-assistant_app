@@ -1,182 +1,475 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ResumeForm } from '../ResumeForm';
-import { JobDescriptionForm } from '../JobDescriptionForm';
-import { AnswerRenderer } from '../AnswerRenderer';
-import SpeechController from '../speech/SpeechController';
-import LiveSuggestionBox from '../suggestions/LiveSuggestionBox';
-import { fetchGeminiAnswer, fetchGeminiSuggestion } from '../../lib/geminiApi';
-import { Textarea } from '../Textarea';
-import { Button } from '../Button';
+import React, { useState, useRef, useEffect } from "react";
+import { Card, CardContent } from "../ui/card";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
+import { Button } from "../ui/button";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { User, Bot, Mic, X, Send, Plus, Settings } from "lucide-react";
+import SpeechController from "../speech/SpeechController";
+import { ResumeForm } from "../ResumeForm";
+import { JobDescriptionForm } from "../JobDescriptionForm";
+import { AnswerRenderer } from "../AnswerRenderer";
+import { fetchGeminiAnswer } from "../../lib/geminiApi";
+import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 
 export default function Interview() {
-  const [question, setQuestion] = useState('');
-  const [resume, setResume] = useState('');
-  const [jobDesc, setJobDesc] = useState('');
-  const [position, setPosition] = useState('');
+  const [question, setQuestion] = useState("");
+  const [resume, setResume] = useState("");
+  const [jobDesc, setJobDesc] = useState("");
+  const [position, setPosition] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [suggestion, setSuggestion] = useState('');
-  const [suggestionLoading, setSuggestionLoading] = useState(false);
-
+  const [micActive, setMicActive] = useState(false);
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
-  const suggestionDebounceRef = useRef(null);
+  const [showContext, setShowContext] = useState(true);
+  const [mobileContextOpen, setMobileContextOpen] = useState(false);
+  const [step, setStep] = useState(1); // 1: Resume/JD, 2: Interview
+
+  // Add state for controlling mic
+  const speechControllerRef = useRef();
+  const handleMicClick = () => {
+    if (speechControllerRef.current && speechControllerRef.current.toggleListening) {
+      speechControllerRef.current.toggleListening();
+    } else {
+      alert('Mic feature coming soon!');
+    }
+  };
+  const handlePlusClick = () => {
+    alert('Add/attachment feature coming soon!');
+  };
+  const handleSettingsClick = () => {
+    alert('Settings feature coming soon!');
+  };
 
   const handleSubmit = async () => {
     if (!question.trim()) return;
     setLoading(true);
-
     const previousContext = chatHistory
       .map((entry, idx) => `Q${idx + 1}: ${entry.question}\nA${idx + 1}: ${entry.answer}`)
-      .join('\n\n');
-
-    const fullPrompt = `You are acting as a highly prepared job candidate in a final round interview for the role of ${position || '[POSITION]'}.
-
-🎯 Your goal is to answer the interviewer's question naturally, confidently, and fluently — just like a top-tier human candidate would. The user will read or speak this answer directly, so it should be easy to say aloud.
-
-📌 Base your response on the following:
-
-📄 RESUME:
-"""
-${resume}
-"""
-
-🧾 JOB DESCRIPTION:
-"""
-${jobDesc}
-"""
-
-🗂️ CONVERSATION HISTORY:
-"""
-${previousContext}
-"""
-
-🆕 NEW QUESTION:
-"${question}"
-
-🗣️ How to Answer:
-- Speak like a real human — clear, friendly, and confident.
-- Avoid robotic phrasing or repeating the question.
-- Use contractions (“I’ve”, “I’m”, “it’s”) like in real speech.
-- Structure naturally: a short intro → key points → closing remark.
-- Use **bold text** (with double asterisks) for impactful phrases or values.
-- Format any code snippets inside triple backticks (like \`\`\`js).
-
-Now give the complete answer — ready to be spoken aloud.`;
-
-
+      .join("\n\n");
+    const fullPrompt = `You are acting as a highly prepared job candidate in a final round interview for the role of ${position || '[POSITION]'}.\n\n${question}\n\nResume:\n${resume}\n\nJob Description:\n${jobDesc}\n\nConversation History:\n${previousContext}`;
     try {
       const response = await fetchGeminiAnswer(fullPrompt);
       setChatHistory((prev) => [...prev, { question, answer: response }]);
-      setQuestion('');
+      setQuestion("");
       inputRef.current?.focus();
     } catch (error) {
-      console.error('Error fetching answer:', error);
+      toast.error("Failed to get answer from AI.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSuggestionFetch = async (text) => {
-    if (!text.trim() || text.length < 6) return;
-
-    const suggestionPrompt = `You're an AI assistant that gives quick suggestions while a candidate is answering interview questions aloud.
-
-Candidate said:
-"${text}"
-
-💡Give one short and helpful suggestion to improve their answer.`;
-
-    setSuggestionLoading(true);
-    try {
-      const hint = await fetchGeminiSuggestion(suggestionPrompt);
-      setSuggestion(hint);
-    } catch (err) {
-      console.error('Suggestion fetch failed:', err);
-      setSuggestion('');
-    } finally {
-      setSuggestionLoading(false);
-    }
-  };
-
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-  const clearQuestion = () => {
-    setQuestion('');
-    setSuggestion('');
-  };
+  const clearQuestion = () => setQuestion("");
+  const handleTextUpdate = (text) => setQuestion(text);
 
-  const handleTextUpdate = (text) => {
-    setQuestion(text);
-    clearTimeout(suggestionDebounceRef.current);
-    suggestionDebounceRef.current = setTimeout(() => {
-      handleSuggestionFetch(text);
-    }, 800);
-  };
-
+  // Step 1: Resume & JD Entry
+  if (step === 1) {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <header className="px-6 py-4 bg-indigo-600 text-white shadow-lg">
-        <h1 className="text-2xl md:text-3xl font-bold text-center">Interview AI Assistant</h1>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center"
+        style={{
+          background: "#181a1b",
+          fontFamily: "Arial, sans-serif",
+          color: "#f8f9fa",
+        }}
+      >
+        {/* Header */}
+        <header
+          style={{
+            width: "100%",
+            height: "60px",
+            background: "#23272f",
+            display: "flex",
+            alignItems: "center",
+            borderBottom: "1px solid #222c37",
+            marginBottom: "32px",
+            padding: "0 32px",
+            borderRadius: "0 0 8px 8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+          }}
+        >
+          <img
+            src="/logo.png"
+            alt="Solvinger Logo"
+            style={{ height: 40, marginRight: 16 }}
+          />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 22, color: "#4a90e2" }}>
+              Solvinger
+            </div>
+            <div style={{ fontSize: 14, color: "#b0b8c1" }}>
+              The AI Chat Bot (Community)
+            </div>
+          </div>
       </header>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 md:px-8 max-w-6xl mx-auto mt-6">
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <ResumeForm value={resume} onChange={(e) => setResume(e.target.value)} />
+        {/* Resume/JD Form */}
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 480,
+            background: "#23272f",
+            borderRadius: 8,
+            boxShadow: "0 2px 16px rgba(0,0,0,0.18)",
+            padding: 32,
+            border: "1px solid #222c37",
+          }}
+        >
+          <h2
+            style={{
+              fontWeight: 700,
+              fontSize: 20,
+              marginBottom: 24,
+              textAlign: "center",
+              color: "#4a90e2",
+            }}
+          >
+            Interview Setup
+          </h2>
+          <div style={{ marginBottom: 20 }}>
+            <label
+              htmlFor="resume"
+              style={{
+                display: "block",
+                fontWeight: 600,
+                marginBottom: 8,
+                color: "#f8f9fa",
+              }}
+            >
+              Resume
+            </label>
+            <textarea
+              id="resume"
+              value={resume}
+              onChange={e => setResume(e.target.value)}
+              placeholder="Paste your resume here..."
+              style={{
+                width: "100%",
+                minHeight: 80,
+                borderRadius: 8,
+                border: "1px solid #222c37",
+                background: "#181a1b",
+                color: "#f8f9fa",
+                padding: 12,
+                fontFamily: "Arial, sans-serif",
+                fontSize: 15,
+                marginBottom: 0,
+                resize: "vertical",
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: 28 }}>
+            <label
+              htmlFor="jobdesc"
+              style={{
+                display: "block",
+                fontWeight: 600,
+                marginBottom: 8,
+                color: "#f8f9fa",
+              }}
+            >
+              Job Description
+            </label>
+            <textarea
+              id="jobdesc"
+              value={jobDesc}
+              onChange={e => setJobDesc(e.target.value)}
+              placeholder="Paste the job description here..."
+              style={{
+                width: "100%",
+                minHeight: 80,
+                borderRadius: 8,
+                border: "1px solid #222c37",
+                background: "#181a1b",
+                color: "#f8f9fa",
+                padding: 12,
+                fontFamily: "Arial, sans-serif",
+                fontSize: 15,
+                marginBottom: 0,
+                resize: "vertical",
+              }}
+            />
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <JobDescriptionForm value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} />
+          <button
+            onClick={() => setStep(2)}
+            disabled={!resume.trim() || !jobDesc.trim()}
+            style={{
+              width: "100%",
+              height: 48,
+              borderRadius: 8,
+              background: "#007bff",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 17,
+              border: "none",
+              cursor: !resume.trim() || !jobDesc.trim() ? "not-allowed" : "pointer",
+              opacity: !resume.trim() || !jobDesc.trim() ? 0.6 : 1,
+              boxShadow: "0 2px 8px rgba(0,123,255,0.18)",
+              transition: "background 0.2s",
+            }}
+          >
+            Start Interview
+          </button>
         </div>
       </div>
+    );
+  }
 
-      <div className="px-4 md:px-8 max-w-4xl mx-auto mt-4">
+  // Step 2: Interview Chat UI
+  return (
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: "#181a1b", fontFamily: "Arial, sans-serif", color: "#f8f9fa" }}
+    >
+      {/* Header */}
+      <header
+        style={{
+          width: "100%",
+          height: "60px",
+          background: "#23272f",
+          display: "flex",
+          alignItems: "center",
+          borderBottom: "1px solid #222c37",
+          padding: "0 32px",
+          borderRadius: "0 0 8px 8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+        }}
+      >
+        <img src="/logo.png" alt="Solvinger Logo" style={{ height: 40, marginRight: 16 }} />
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 22, color: "#4a90e2" }}>Solvinger</div>
+          <div style={{ fontSize: 14, color: "#b0b8c1" }}>The AI Chat Bot (Community)</div>
+        </div>
+      </header>
+      {/* Main Chat Area - open, not boxed */}
+      <main
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          width: "100%",
+          padding: "24px 0 88px 0",
+        }}
+      >
+        {/* Position input */}
         <input
           type="text"
           value={position}
-          onChange={(e) => setPosition(e.target.value)}
+          onChange={e => setPosition(e.target.value)}
           placeholder="Enter position/role (e.g., Software Engineer)"
-          className="w-full p-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 transition"
+          style={{
+            width: "100%",
+            maxWidth: 700,
+            margin: "0 auto 14px auto",
+            padding: "12px 14px",
+            borderRadius: 8,
+            border: "1px solid #222c37",
+            background: "#181a1b",
+            color: "#f8f9fa",
+            fontSize: 15,
+            outline: "none",
+            display: "block",
+            boxSizing: "border-box",
+          }}
           aria-label="Position or role"
         />
-      </div>
-
-      <main className="flex flex-col flex-grow max-w-4xl mx-auto w-full px-4 md:px-8 mt-4 mb-6">
-        <div className="flex-grow overflow-y-auto bg-white rounded-lg shadow-md p-4 md:p-6" style={{ maxHeight: '60vh' }}>
+        {/* Chat messages - free-flowing, ChatGPT-like, no extra divs */}
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 700,
+            margin: "0 auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+            flex: 1,
+            minHeight: 250,
+            padding: "0 8px",
+            boxSizing: "border-box",
+          }}
+        >
           {chatHistory.length === 0 && (
-            <p className="text-center text-gray-500 italic mt-12">
+            <p style={{ textAlign: "center", color: "#b0b8c1", fontStyle: "italic", marginTop: 24, fontSize: 15 }}>
               Start by asking a question for the {position || '[POSITION]'} role.
             </p>
           )}
-          {chatHistory.map((entry, idx) => (
-            <div key={idx} className="mb-6 animate-slideFadeIn">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-semibold text-indigo-600">👤 You:</span>
-              </div>
-              <div className="bg-indigo-50 text-gray-800 rounded-lg p-4 shadow-sm">
+          {chatHistory.map((entry, idx) => [
+            // User message (right-aligned)
+            <div key={`user-${idx}`} style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 6 }}>
+              <div
+                style={{
+                  background: "#007bff",
+                  color: "#fff",
+                  borderRadius: 16,
+                  padding: "12px 14px",
+                  maxWidth: "90vw",
+                  width: "fit-content",
+                  fontWeight: 500,
+                  fontSize: 15,
+                  boxShadow: "0 2px 8px rgba(0,123,255,0.10)",
+                  marginBottom: 1,
+                  wordBreak: "break-word",
+                }}
+              >
                 {entry.question}
               </div>
-              <div className="flex items-center gap-2 mt-4 mb-2">
-                <span className="text-sm font-semibold text-green-600">🤖 Assistant:</span>
-              </div>
-              <div className="bg-green-50 text-gray-800 rounded-xl p-6 shadow-md whitespace-pre-wrap leading-relaxed prose prose-green max-w-none">
-                <AnswerRenderer content={entry.answer} />
+            </div>,
+            // Bot message (left-aligned)
+            <div key={`bot-${idx}`} style={{ display: "flex", justifyContent: "flex-start", alignItems: "flex-end", gap: 6, marginTop: 6 }}>
+              <div
+                style={{
+                  background: "#232323",
+                  color: "#f8f9fa",
+                  borderRadius: 16,
+                  padding: "12px 14px",
+                  maxWidth: "90vw",
+                  width: "fit-content",
+                  fontSize: 15,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                  marginBottom: 1,
+                  wordBreak: "break-word",
+                }}
+              >
+                {entry.answer ? <AnswerRenderer content={entry.answer} /> : <span style={{ color: "#4a90e2", fontStyle: "italic" }}>No answer returned.</span>}
               </div>
             </div>
-          ))}
+          ])}
+          {/* Loader while generating answer */}
+          {loading && (
+            <div style={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "flex-start",
+              gap: 14,
+              margin: "18px 0 18px 0",
+              minHeight: 48,
+              width: "100%",
+              animation: "fadeInLoader 0.4s",
+            }}>
+              <span style={{
+                display: "inline-block",
+                width: 36,
+                height: 36,
+                position: "relative",
+              }}>
+                <span style={{
+                  boxSizing: "border-box",
+                  display: "block",
+                  position: "absolute",
+                  width: 36,
+                  height: 36,
+                  border: "4px solid #232c3b",
+                  borderRadius: "50%",
+                  borderTop: "4px solid #4a90e2",
+                  borderRight: "4px solid #4a90e2",
+                  animation: "spin 0.8s linear infinite",
+                  boxShadow: "0 0 12px #4a90e2, 0 0 2px #232c3b",
+                  left: 0,
+                  top: 0,
+                }} />
+                <span style={{
+                  boxSizing: "border-box",
+                  display: "block",
+                  position: "absolute",
+                  width: 24,
+                  height: 24,
+                  left: 6,
+                  top: 6,
+                  border: "3px solid #232c3b",
+                  borderRadius: "50%",
+                  borderBottom: "3px solid #4a90e2",
+                  borderLeft: "3px solid #4a90e2",
+                  animation: "spinReverse 1.2s linear infinite",
+                  boxShadow: "0 0 6px #4a90e2, 0 0 1px #232c3b",
+                }} />
+                <style>{`
+                  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                  @keyframes spinReverse { 0% { transform: rotate(360deg); } 100% { transform: rotate(0deg); } }
+                  @keyframes fadeInLoader { from { opacity: 0; } to { opacity: 1; } }
+                `}</style>
+              </span>
+              <span style={{ color: "#b0b8c1", fontSize: 16, fontWeight: 500, fontFamily: 'Arial, sans-serif', letterSpacing: 0.2 }}>Generating answer…</span>
+            </div>
+          )}
           <div ref={chatEndRef} />
         </div>
-
-        <div className="bg-white rounded-lg shadow-md p-4 md:p-6 flex flex-col sm:flex-row items-center gap-4 mt-4">
-          <div className="relative flex-grow w-full">
-            <Textarea
+      </main>
+      {/* Floating Input Bar - modern Copilot/ChatGPT style with icons */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          width: "100%",
+          background: "transparent",
+          zIndex: 100,
+          display: "flex",
+          justifyContent: "center",
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: 0,
+            padding: "0 4px 16px 4px",
+            pointerEvents: "auto",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              background: "#232323",
+              borderRadius: 24,
+              boxShadow: "0 2px 16px rgba(0,0,0,0.18)",
+              padding: "0 8px 0 4px",
+              border: "1px solid #232c3b",
+              minHeight: 44,
+              maxWidth: "100vw",
+            }}
+          >
+            {/* SpeechController (mic/stop/status) */}
+            <div style={{ marginRight: 6 }}>
+              <SpeechController onTextUpdate={handleTextUpdate} />
+            </div>
+            {/* Textarea */}
+            <textarea
               ref={inputRef}
               value={question}
-              onChange={(e) => handleTextUpdate(e.target.value)}
-              placeholder={`Ask your interview question for the ${position || '[POSITION]'} role...`}
-              className="min-h-[100px] pr-12 resize-none rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 transition w-full"
-              onKeyDown={(e) => {
+              onChange={e => handleTextUpdate(e.target.value)}
+              placeholder={"Ask anything"}
+              style={{
+                minHeight: 36,
+                maxHeight: 100,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                color: "#f8f9fa",
+                fontSize: 15,
+                fontFamily: "Arial, sans-serif",
+                flex: 1,
+                resize: "vertical",
+                padding: "10px 0 10px 0",
+                marginRight: 0,
+                width: "100%",
+                boxSizing: "border-box",
+              }}
+              onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   if (!loading) handleSubmit();
@@ -185,55 +478,54 @@ Candidate said:
               disabled={loading}
               aria-label="Interview question input"
             />
+            {/* Clear button */}
             {question && (
               <button
                 onClick={clearQuestion}
-                className="absolute top-3 right-3 text-gray-400 hover:text-indigo-600 transition-transform hover:scale-110"
-                title="Clear input"
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#b0b8c1",
+                  fontSize: 18,
+                  marginLeft: 3,
+                  marginRight: 3,
+                  cursor: "pointer",
+                  transition: "color 0.2s",
+                }}
                 aria-label="Clear question input"
+                tabIndex={-1}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-5 h-5" />
               </button>
             )}
-          </div>
-                      <LiveSuggestionBox suggestion={suggestion} isLoading={suggestionLoading} />
-
-
-          <div className="flex flex-wrap gap-3 justify-end w-full sm:w-auto items-center">
-            <SpeechController onTextUpdate={handleTextUpdate}  />
-            <Button
+            {/* Send button */}
+            <button
               onClick={handleSubmit}
               disabled={loading || !question.trim()}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-transform hover:scale-105 active:scale-95"
+              style={{
+                background: loading || !question.trim() ? "#232c3b" : "#007bff",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
+                width: 36,
+                height: 36,
+                marginLeft: 4,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 18,
+                cursor: loading || !question.trim() ? "not-allowed" : "pointer",
+                opacity: loading || !question.trim() ? 0.6 : 1,
+                boxShadow: loading || !question.trim() ? "none" : "0 2px 8px rgba(0,123,255,0.18)",
+                transition: "background 0.2s, opacity 0.2s",
+              }}
               aria-label="Submit question"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-              Ask
-            </Button>
-            <Button
-              onClick={() => setChatHistory([])}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white transition-transform hover:scale-105 active:scale-95"
-              disabled={loading}
-              aria-label="Clear chat history"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Clear
-            </Button>
+              <Send className="w-5 h-5" />
+            </button>
           </div>
         </div>
-
-        {loading && (
-          <p className="text-center text-indigo-600 font-medium mt-2 flex items-center justify-center gap-2">
-            <span className="animate-spin">⏳</span> Thinking...
-          </p>
-        )}
-      </main>
+      </div>
     </div>
   );
 }

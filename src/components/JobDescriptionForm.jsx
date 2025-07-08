@@ -1,18 +1,20 @@
 import React from 'react';
 import { Card } from './Card';
 import { Label } from './Label';
+import { Textarea } from './Textarea';
 
 export function JobDescriptionForm({ value, onChange }) {
   return (
-    <Card>
-      <Label htmlFor="jobDesc">Job Description</Label>
-      <textarea
+    <Card className="bg-white/5 border border-white/10 backdrop-blur-md shadow-xl">
+      <Label htmlFor="jobDesc" className="text-white/90">Job Description</Label>
+      <Textarea
         id="jobDesc"
         value={value}
         onChange={onChange}
         placeholder="Paste the job description or expectations here..."
         rows={8}
-        className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        variant="dark"
+        className="w-full p-3 rounded-xl"
       />
     </Card>
   );

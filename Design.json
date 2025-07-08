@@ -1,0 +1,111 @@
+{
+  "name": "SolvingerAICommunity",
+  "theme": {
+    "colors": {
+      "primary": "#007bff",
+      "secondary": "#ffffff",
+      "background": "#f8f9fa",
+      "textPrimary": "#333333",
+      "textSecondary": "#555555",
+      "inputBackground": "#ffffff",
+      "buttonBackground": "#007bff",
+      "buttonText": "#ffffff",
+      "bubbleUser": "#007bff",
+      "bubbleBot": "#e9ecef"
+    },
+    "fontFamily": "Arial, sans-serif",
+    "borderRadius": "8px"
+  },
+  "layout": {
+    "header": {
+      "visible": true,
+      "title": "Solvinger",
+      "subtitle": "The AI Chat Bot (Community)",
+      "logoUrl": "logo.png",
+      "height": "60px"
+    },
+    "loginForm": {
+      "visible": true,
+      "fields": [
+        {
+          "name": "username",
+          "type": "text",
+          "placeholder": "Enter username"
+        },
+        {
+          "name": "password",
+          "type": "password",
+          "placeholder": "Enter password"
+        }
+      ],
+      "buttonText": "Login"
+    },
+    "chatWindow": {
+      "visible": true,
+      "messagesArea": {
+        "background": "#ffffff",
+        "padding": "16px",
+        "borderRadius": "8px",
+        "height": "400px",
+        "overflowY": "scroll"
+      },
+      "inputArea": {
+        "placeholder": "Type your message...",
+        "buttonText": "Send",
+        "height": "60px"
+      }
+    },
+    "footer": {
+      "visible": false
+    }
+  },
+  "components": [
+    {
+      "type": "Header",
+      "properties": {
+        "logoUrl": "logo.png",
+        "title": "Solvinger",
+        "subtitle": "The AI Chat Bot"
+      }
+    },
+    {
+      "type": "LoginForm",
+      "properties": {
+        "fields": [
+          {
+            "name": "username",
+            "type": "text",
+            "placeholder": "Enter username"
+          },
+          {
+            "name": "password",
+            "type": "password",
+            "placeholder": "Enter password"
+          }
+        ],
+        "buttonText": "Login"
+      }
+    },
+    {
+      "type": "ChatArea",
+      "properties": {
+        "messages": [
+          {
+            "sender": "bot",
+            "text": "Hi there! How can I help you today?"
+          },
+          {
+            "sender": "user",
+            "text": "How do I write HTML code?"
+          },
+          {
+            "sender": "bot",
+            "text": "Here's a basic HTML structure..."
+          }
+        ],
+        "inputPlaceholder": "Type your message...",
+        "sendButtonText": "Send"
+      }
+    }
+  ]
+}
